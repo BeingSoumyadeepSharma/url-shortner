@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1704401379579,
+      "tag": "0000_pale_ironclad",
+      "breakpoints": true
+    }
+  ]
+}
