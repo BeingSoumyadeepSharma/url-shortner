@@ -32,69 +32,71 @@ app.get("/", cors(), (req: Request, res: Response) => {
   let net_conn = {
     error: "Not Found"
   }
-  res.status(404).json(net_conn);
-  res.end();
+  return res.status(404).json(net_conn);
 });
 
 app.get("/:shortUrlId", cors(), async (req: Request, res: Response) => {
   let shortUrl: string = req.params.shortUrlId;
   console.log(`[server]: Search Id ===> ${shortUrl}`);
   await connect_obj.createQueryClient()
-  .then((db_conn: PostgresJsDatabase<Record<string, never>>): any => {
-    if (!ObjectExtensions.isNullOrUndefined(db_conn)) {
-      let UrlEncoder: UrlEncoderService = new UrlEncoderService(db_conn);
+    .then((db_conn: PostgresJsDatabase<Record<string, never>>): any => {
+      if (!ObjectExtensions.isNullOrUndefined(db_conn)) {
+        let UrlEncoder: UrlEncoderService = new UrlEncoderService(db_conn);
 
-      UrlEncoder.getOriginalUrl(shortUrl)
-        .then((value: string): any => {
-          if(!ObjectExtensions.isNullOrUndefined(value) && !ObjectExtensions.isEmptyString(value)) {
-            res.status(302).redirect(value);
-            res.end();
-          }
-          else {
+        UrlEncoder.getOriginalUrl(shortUrl)
+          .then((value: string): any => {
+            if (!ObjectExtensions.isNullOrUndefined(value) && !ObjectExtensions.isEmptyString(value)) {
+              //return res.status(302).redirect(value);
+              return res.status(200).json({originalUrl: value});
+            }
+            else {
+              let errorBody = {
+                id: uuidv4(),
+                errorMessage: "Invalid Url: Failed to redirect."
+              };
+
+              return res.status(400).json(errorBody);
+            }
+          })
+          .catch((reason: any): any => {
             let errorBody = {
               id: uuidv4(),
-              errorMessage: "Invalid Url: Failed to redirect."
+              errorMessage: "Exception in the server",
+              error: reason
             };
 
-            res.send(400).send(errorBody);
-            res.end();
-          }
-        })
-        .catch((reason: any): any => {
-          let errorBody = {
-            id: uuidv4(),
-            errorMessage: "Exception in the server: \r\n" + JSON.stringify(reason)
-          };
-    
-          res.send(500).send(errorBody);
-          res.end();
-        });
-    }
-    else {
+            return res.status(500).json(errorBody);
+          });
+      }
+      else {
+        let errorBody = {
+          id: uuidv4(),
+          errorMessage: "Database connection failed."
+        };
+
+        return res.status(400).json(errorBody);
+      }
+    })
+    .catch((reason: any): any => {
       let errorBody = {
         id: uuidv4(),
-        errorMessage: "Database connection failed."
+        errorMessage: "Exception in the server: \r\n" + JSON.stringify(reason)
       };
 
-      res.send(500).send(errorBody);
-      res.end();
-    }
-  })
-  .catch((reason: any): any => {
-    let errorBody = {
-      id: uuidv4(),
-      errorMessage: "Exception in the server: \r\n" + JSON.stringify(reason)
-    };
-
-    res.send(500).send(errorBody);
-    res.end();
-  });
+      return res.status(500).json(errorBody);
+    });
 });
 
 app.post("/shorturl", cors(corsOptions), async (req: Request, res: Response) => {
-  let urlRequest: ShortUrlRequest = {
-    originalUrl: req.body.url_string
-  };
+  let urlRequest: ShortUrlRequest = {};
+  if (!ObjectExtensions.isNullOrUndefined(req.body.urlString) && !ObjectExtensions.isEmptyString(req.body.urlString)) {
+    urlRequest = {
+      originalUrl: req.body.urlString
+    };
+  }
+  else {
+    return res.status(400).json({ error: "Bad Request"});
+  }
 
   console.log(`[server]: Request Logged: \r\n ${JSON.stringify(urlRequest)}`);
   await connect_obj.createQueryClient()
@@ -113,8 +115,7 @@ app.post("/shorturl", cors(corsOptions), async (req: Request, res: Response) => 
                 shortUrl: shortUrl
               };
 
-              res.status(200).send(response);
-              res.end();
+              return res.status(200).send(response);
             }
             else {
               let errorBody = {
@@ -122,8 +123,7 @@ app.post("/shorturl", cors(corsOptions), async (req: Request, res: Response) => 
                 errorMessage: "Failed to generate short url"
               };
 
-              res.send(500).send(errorBody);
-              res.end();
+              return res.send(500).send(errorBody);
             }
           })
           .catch((reason: any): any => {
@@ -132,8 +132,7 @@ app.post("/shorturl", cors(corsOptions), async (req: Request, res: Response) => 
               errorMessage: "Exception in the server: \r\n" + JSON.stringify(reason)
             };
 
-            res.send(500).send(errorBody);
-            res.end();
+            return res.send(500).send(errorBody);
           });
       }
       else {
@@ -142,8 +141,7 @@ app.post("/shorturl", cors(corsOptions), async (req: Request, res: Response) => 
           errorMessage: "Database connection failed."
         };
 
-        res.send(500).send(errorBody);
-        res.end();
+        return res.send(500).send(errorBody);
       }
     })
     .catch((reason: any): any => {
@@ -152,8 +150,7 @@ app.post("/shorturl", cors(corsOptions), async (req: Request, res: Response) => 
         errorMessage: "Exception in the server: \r\n" + JSON.stringify(reason)
       };
 
-      res.send(500).send(errorBody);
-      res.end();
+      return res.send(500).send(errorBody);
     });
 });
 
